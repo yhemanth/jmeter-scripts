@@ -74,8 +74,8 @@ testplan = """
         <stringProp name="checkQuery"></stringProp>
         <stringProp name="dbUrl">%(jdbc)s</stringProp>
         <stringProp name="driver">org.apache.hive.jdbc.HiveDriver</stringProp>
-        <stringProp name="username"></stringProp>
-        <stringProp name="password"></stringProp>
+        <stringProp name="username">%(user_name)s</stringProp>
+        <stringProp name="password">%(passwd)s</stringProp>
       </JDBCDataSource>
       <hashTree/>
       <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
@@ -161,10 +161,12 @@ def oneliner(q):
     return " ".join(lines)
 
 def main(argv):
-    (opts, args) = getopt(argv, "u:t:n:ed:q:")
+    (opts, args) = getopt(argv, "u:t:n:ed:q:U:p:")
     threads = 1
     repeats = 1
     query_count = 1
+    user_name = ""
+    passwd = ""
     explain = ""
     jdbc = "jdbc:hive2://ip-172-31-32-11.ec2.internal:10000/tpcds_bin_partitioned_s3_orc_200_east"
     query_home = "queries"
@@ -181,6 +183,10 @@ def main(argv):
             repeats = int(v)
         if(k == "-q"):
             query_count = int(v)
+        if(k == "-U"):
+            user_name = v
+        if(k == "-p"):
+            passwd = v
 
     queries = []
     queries += [("tpcds", v) for v in glob("%s/*.sql" % query_home)]
@@ -211,7 +217,9 @@ def main(argv):
         "jdbc" : jdbc,
         "threads" : threads,
         "thread_groups" : thread_groups,
-        "results_for" : now 
+        "results_for" : now,
+        "user_name" : user_name,
+        "passwd" : passwd 
     }
     print testplan % args
 

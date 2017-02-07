@@ -119,7 +119,7 @@ testplan = """
 
 thread_group = """
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="User-%(group)d" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">startnextloop</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <intProp name="LoopController.loops">%(repeats)d</intProp>
@@ -132,7 +132,9 @@ thread_group = """
         <stringProp name="ThreadGroup.duration"></stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
       </ThreadGroup>
-      <hashTree>
+"""
+
+sql_test = """
         <JDBCSampler guiclass="TestBeanGUI" testclass="JDBCSampler" testname="${queryId}" enabled="true">
           <stringProp name="dataSource">hiveConnection</stringProp>
           <stringProp name="queryType">Select Statement</stringProp>
@@ -145,9 +147,7 @@ thread_group = """
           <stringProp name="resultSetHandler">Store as String</stringProp>
         </JDBCSampler>
         <hashTree/>
-      </hashTree>
 """
-
 
 SQL_COMMENT = re.compile("-- .*") 
 
@@ -161,9 +161,10 @@ def oneliner(q):
     return " ".join(lines)
 
 def main(argv):
-    (opts, args) = getopt(argv, "u:t:n:ed:")
+    (opts, args) = getopt(argv, "u:t:n:ed:q:")
     threads = 1
     repeats = 1
+    query_count = 1
     explain = ""
     jdbc = "jdbc:hive2://ip-172-31-32-11.ec2.internal:10000/tpcds_bin_partitioned_s3_orc_200_east"
     query_home = "queries"
@@ -178,6 +179,8 @@ def main(argv):
             explain = "explain formatted "
         if(k == "-n"):
             repeats = int(v)
+        if(k == "-q"):
+            query_count = int(v)
 
     queries = []
     queries += [("tpcds", v) for v in glob("%s/*.sql" % query_home)]
@@ -195,9 +198,15 @@ def main(argv):
     
     open("queries_%s.csv" % now, "w").write("\n".join(["tpcds-%s^%s" % j for j in jdbc_queries])) 
 
+    thread_group_full = thread_group
+    thread_group_full += """      <hashTree>"""
+    for i in range(query_count):
+        thread_group_full += sql_test
+    thread_group_full += """      </hashTree>"""
+    
     thread_groups = ""
     for i in range(threads):
-        thread_groups += thread_group % {"group" : i, "repeats" : repeats} 
+        thread_groups += thread_group_full % {"group" : i, "repeats" : repeats} 
     args = {
         "jdbc" : jdbc,
         "threads" : threads,

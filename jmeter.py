@@ -23,8 +23,8 @@ testplan = """
         <stringProp name="variableNames">queryId,query</stringProp>
         <stringProp name="delimiter">^</stringProp>
         <boolProp name="quotedData">true</boolProp>
-        <boolProp name="recycle">false</boolProp>
-        <boolProp name="stopThread">true</boolProp>
+        <boolProp name="recycle">true</boolProp>
+        <boolProp name="stopThread">false</boolProp>
         <stringProp name="shareMode">shareMode.all</stringProp>
       </CSVDataSet>
       <hashTree/>
@@ -119,10 +119,10 @@ testplan = """
 
 thread_group = """
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="User-%(group)d" enabled="true">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">startnextloop</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <intProp name="LoopController.loops">-1</intProp>
+          <intProp name="LoopController.loops">%(repeats)d</intProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
@@ -161,12 +161,15 @@ def oneliner(q):
     return " ".join(lines)
 
 def main(argv):
-    (opts, args) = getopt(argv, "u:t:n:e")
+    (opts, args) = getopt(argv, "u:t:n:ed:")
     threads = 1
     repeats = 1
     explain = ""
     jdbc = "jdbc:hive2://ip-172-31-32-11.ec2.internal:10000/tpcds_bin_partitioned_s3_orc_200_east"
+    query_home = "queries"
     for k,v in opts:
+        if(k == "-d"):
+            query_home = v
         if(k == "-u"):
             jdbc = v
         if(k == "-t"):
@@ -177,7 +180,7 @@ def main(argv):
             repeats = int(v)
 
     queries = []
-    queries += [("tpcds", v) for v in glob("queries/*.sql")]
+    queries += [("tpcds", v) for v in glob("%s/*.sql" % query_home)]
     now = "x%d_%s" % (threads, datetime.now().strftime("%s")) 
 
     jdbc_queries = []
